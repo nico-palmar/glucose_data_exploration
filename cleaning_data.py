@@ -121,6 +121,7 @@ def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sug
         # clean the data before adding it to the list
         curr_df = convert_to_numerical(curr_df, ['exercise (mins)', 'mmol/L'])
         curr_df = clean_trends(curr_df)
+        curr_df = extract_date_features(curr_df)
 
         df_list.append(curr_df)
         print('Added df for: ' + date_str)
@@ -140,6 +141,22 @@ def convert_to_numerical(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
  
     return df
 
+def extract_date_features(df: pd.DataFrame) -> pd.DataFrame:
+    def split_date(row):
+        """Parse the datetime field
+        """
+        month = row['time'].month
+        day = row['time'].day
+        year = row['time'].year
+        min_time = row['time'].hour * 60 + row['time'].minute
+        # for weekday, monday is 0 sunday is 6
+        weekday = row['time'].weekday()
+        return (day, month, year, min_time, weekday)
+ 
+    # geet new features from the time feature
+    df['day'], df['month'], df['year'], df['minutes_time'], df['weekday'] = zip(*df.apply(split_date, axis=1))
+    df.drop(columns=['time'], inplace=True)
+    return df
 
 def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
     trends_dict = {
@@ -162,5 +179,5 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
 # print(get_next_date('Wed Dec 30, 2020'))
 large_df = read_multiple_days('Sat Feb 27, 2021', 1)
 
-print(large_df.head(10))
+print(large_df.head(20))
 print(large_df.info())
