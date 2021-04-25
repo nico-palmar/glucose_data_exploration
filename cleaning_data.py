@@ -175,9 +175,45 @@ def one_hot_encode(df: pd.DataFrame, cols: List[str] = ['activity']) -> pd.DataF
         all_dfs.append(oh_df)
 
     df = pd.concat(all_dfs, axis=1)
+
+    # fill the exercise times prior to dropping
+    df = fill_exercise_times(df)
+
     # drop all parent columns (of the OH encoding)
     df.drop(columns=cols, inplace=True)
     return df
+
+def fill_exercise_times(df: pd.DataFrame) -> pd.DataFrame:
+    """Fill in the one hot encoded exercise values to contain a 1 when exercise was occuring
+    """
+    df = df.copy()
+    MEASUREMENT_INTERVAL = 5
+    # iterate through df to keep track of exercise time between rows
+    curr_exercise =  {'exercise': None, 'time': 0}
+    for index, row in df.iterrows():
+        # check if there is any current exercise 
+        if curr_exercise['exercise'] != None and curr_exercise['time'] > 0 and pd.isnull(row['activity']):
+            # rows are copies from the dataframe, use .loc to modify elements from the df  
+            df.loc[index, curr_exercise['exercise']] = 1
+            # print(curr_exercise['exercise'], df.loc[index, curr_exercise['exercise']])
+            curr_exercise['time'] -= MEASUREMENT_INTERVAL
+
+            # if the time has been updated to a negative number, reset the time to zero and reset the exercise
+            if curr_exercise['time'] < 0:
+                # check if the majortiy of the interval was spent not exercizing and remove it if so  
+                if curr_exercise['time'] <= -3:
+                    df.loc[index, curr_exercise['exercise']] = 0
+                curr_exercise['exercise'] = None
+                curr_exercise['time'] = 0
+        
+        # check if there is a new activity for the row 
+        if not pd.isnull(row['activity']):
+            # print('Activity: ' + row['activity'])
+            curr_exercise['exercise'] = row['activity']
+            curr_exercise['time'] = row['exercise (mins)'] - MEASUREMENT_INTERVAL  
+
+    return df   
+
 
 def convert_to_numerical(df: pd.DataFrame, cols: List[str] = ['exercise (mins)', 'mmol/L']) -> pd.DataFrame:
     """Converts a list of columns to numerical types in a dataframe
@@ -196,13 +232,13 @@ def extract_date_features(df: pd.DataFrame) -> pd.DataFrame:
         month = row['time'].month
         day = row['time'].day
         year = row['time'].year
-        min_time = row['time'].hour * 60 + row['time'].minute
+        h_time = row['time'].hour + row['time'].minute / 60
         # for weekday, monday is 0 sunday is 6
         weekday = row['time'].weekday()
-        return (day, month, year, min_time, weekday)
+        return (day, month, year, h_time, weekday)
  
     # geet new features from the time feature
-    df['day'], df['month'], df['year'], df['minutes_time'], df['weekday'] = zip(*df.apply(split_date, axis=1))
+    df['day'], df['month'], df['year'], df['hours_time'], df['weekday'] = zip(*df.apply(split_date, axis=1))
     df.drop(columns=['time'], inplace=True)
     return df
 
@@ -231,7 +267,7 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
     df['trend'] = df['trend'].apply(map_trends)
     return df
 
-large_df = read_multiple_days('Wed Apr 14, 2021', 4)
+# large_df = read_multiple_days('Wed Apr 14, 2021', 2)
 
-print(large_df.head())
-print(large_df.info())
+# print(large_df.loc[61: 111, ['exercise (mins)', 'Walking', 'high intensity interval training', 'soccer', 'Elliptical', 'basketball']])
+# print(large_df.info())
