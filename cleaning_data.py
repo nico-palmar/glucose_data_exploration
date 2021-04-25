@@ -1,6 +1,8 @@
 import pandas as pd
 from typing import List, Tuple
 import math
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
 
 def read_workbook_sheet(workbook_name: str, sheet_name: str, col_index: int, drop_cols: List[str] = ['carbs (g)', 'bolus (u)', 'basal (u)', 'protein (g)', 'photos']) -> pd.DataFrame:
     """Read an excel sheet from an excel workbook into a dataframe and shifts the data to be correct
@@ -23,7 +25,9 @@ def read_workbook_sheet(workbook_name: str, sheet_name: str, col_index: int, dro
     df.drop(columns=drop_cols, inplace=True)
     return df
 
-def get_next_date(curr_date: str):    
+def get_next_date(curr_date: str) -> str:
+    """Gets the next string value of the date in form DDD MMM #, YYYY
+    """    
     DAY_NAME = 0
     MONTH_NAME = 1
     DAY_NUMBER = 2
@@ -40,6 +44,8 @@ def get_next_date(curr_date: str):
     
 
 def change_day_name(curr_day_name: str):
+    """Change the day of the week to the next day
+    """
     day_list = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
     # get the index for the next day
@@ -52,6 +58,8 @@ def change_day_name(curr_day_name: str):
     return day_list[day_list_index]
 
 def change_date(curr_day_number: str, month: str, year: str):
+    """Change the date value to the next date 
+    """
     month_dict = {
         'Jan': 31, 
         'Feb': 28, 
@@ -92,7 +100,7 @@ def change_date(curr_day_number: str, month: str, year: str):
 
 
 def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sugarmate-Report-Lucas-04-21.xlsx', col_index: int = 13, drop_cols: List[str] = ['carbs (g)', 'bolus (u)', 'basal (u)', 'protein (g)', 'photos']) -> pd.DataFrame:
-    """Reads information from multple days into a dataframe
+    """Reads information from multple days into a dataframe and cleans the dataframe
 
     Args:
         start_date: A string in the form 'DDD MMM #, YYYY' to start reading info
@@ -102,46 +110,86 @@ def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sug
         drop_cols: List of columns to drop from the df
 
     Returns: 
-        A new dataframe with all information in the range requested
+        A new dataframe with all information in the range requested with clean data
     """
 
-    # try:
-    if num_days < 1:
-        raise Exception('Number of days must be >= 1')
-    elif num_days % 1 != 0:
-        raise Exception('Number of days must be an int value')
+    try:
+        if num_days < 1:
+            raise Exception('Number of days must be >= 1')
+        elif num_days % 1 != 0:
+            raise Exception('Number of days must be an int value')
 
-    # initialize loop variables
-    date_str = start_date
-    df_list = []
+        # initialize loop variables
+        date_str = start_date
+        df_list = []
 
-    for i in range(num_days):
-        curr_df = read_workbook_sheet(workbook_name, date_str, col_index, drop_cols=drop_cols)
+        for i in range(num_days):
+            curr_df = read_workbook_sheet(workbook_name, date_str, col_index, drop_cols=drop_cols)
 
-        # clean the data before adding it to the list
-        curr_df = convert_to_numerical(curr_df, ['exercise (mins)', 'mmol/L'])
-        curr_df = clean_trends(curr_df)
-        curr_df = extract_date_features(curr_df)
+            # clean the data before adding it to the list
+            # curr_df = convert_to_numerical(curr_df)
+            # curr_df = clean_trends(curr_df)
+            # curr_df = extract_date_features(curr_df)
+            # curr_df = clean_activity(curr_df)
 
-        df_list.append(curr_df)
-        print('Added df for: ' + date_str)
-        date_str = get_next_date(date_str)
-    
-    # create one large df from all the results
-    full_df = pd.concat(df_list)
-    full_df.reset_index(inplace=True, drop=True)
-    return full_df
+            df_list.append(curr_df)
+            print('Added df for: ' + date_str)
+            date_str = get_next_date(date_str)
+        
+        # create one large df from all the results
+        full_df = pd.concat(df_list)
+        full_df.reset_index(inplace=True, drop=True)
+        # full_df = one_hot_encode(full_df, ['activity'])
 
-    # except Exception as e:
-    #     print(f'Read multiple days error: {e}')
+        # clean the data using a pipeline 
+        cleaning_pipe = Pipeline(steps=[
+            ('obj_to_num', FunctionTransformer(convert_to_numerical)),
+            ('clean_trends', FunctionTransformer(clean_trends)),
+            ('extract_date_features', FunctionTransformer(extract_date_features)),
+            ('clean_activity', FunctionTransformer(clean_activity)),
+            ('oh_encode', FunctionTransformer(one_hot_encode))
+        ])
+        full_df = cleaning_pipe.fit_transform(full_df)
+        return full_df
 
-def convert_to_numerical(df: pd.DataFrame, cols: List[str]) -> pd.DataFrame:
+    except Exception as e:
+        print(f'Read multiple days error: {e}')
+
+        if len(df_list) > 0:
+            full_df = pd.concat(df_list)
+            full_df.reset_index(inplace=True, drop=True)
+            # one hot encode the  activities
+            full_df = one_hot_encode(full_df, ['activity'])
+
+            # return the results up to point of failure if something fails
+            return full_df
+
+def one_hot_encode(df: pd.DataFrame, cols: List[str] = ['activity']) -> pd.DataFrame:
+    """One hot encodes a list of columns in a dataframe
+    """
+
+    all_dfs = [df]
+    for col in cols:
+        # one hot encode the data and add it to a list to later be concatenated
+        oh_df = pd.get_dummies(df[col])
+        all_dfs.append(oh_df)
+
+    df = pd.concat(all_dfs, axis=1)
+    # drop all parent columns (of the OH encoding)
+    df.drop(columns=cols, inplace=True)
+    return df
+
+def convert_to_numerical(df: pd.DataFrame, cols: List[str] = ['exercise (mins)', 'mmol/L']) -> pd.DataFrame:
+    """Converts a list of columns to numerical types in a dataframe
+    """
     for col in cols:
         df[col] = df.loc[df[col].isna() == False, col].astype(float)
  
     return df
 
 def extract_date_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Parse the datetime feature into multiple features
+    """
     def split_date(row):
         """Parse the datetime field
         """
@@ -158,7 +206,15 @@ def extract_date_features(df: pd.DataFrame) -> pd.DataFrame:
     df.drop(columns=['time'], inplace=True)
     return df
 
+def clean_activity(df: pd.DataFrame) -> pd.DataFrame:
+    """Clean the activity column to only contain acitivty names
+    """
+    df['activity'] = df.loc[df['activity'].isna() == False, 'activity'].apply(lambda activity: activity[:activity.find('(')].strip())
+    return df
+
 def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
+    """Clean the trends column to only contain numerical data; label encode the trend data
+    """
     trends_dict = {
         '↓↓': 0,
         '↓': 1,
@@ -169,15 +225,13 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
         '↑↑': 6
     }
     def map_trends(trend):
-        if not pd.isnull(trend):
+        if not pd.isnull(trend) and trend in trends_dict.keys():
             trend = trends_dict[trend]
         return trend
     df['trend'] = df['trend'].apply(map_trends)
     return df
 
+large_df = read_multiple_days('Wed Apr 14, 2021', 4)
 
-# print(get_next_date('Wed Dec 30, 2020'))
-large_df = read_multiple_days('Sat Feb 27, 2021', 1)
-
-print(large_df.head(20))
+print(large_df.head())
 print(large_df.info())
