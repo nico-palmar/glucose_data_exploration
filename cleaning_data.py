@@ -124,45 +124,50 @@ def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sug
         df_list = []
 
         for i in range(num_days):
+            # read the current excel spreadsheet and append it to the list of dfs for each sheet
             curr_df = read_workbook_sheet(workbook_name, date_str, col_index, drop_cols=drop_cols)
-
-            # clean the data before adding it to the list
-            # curr_df = convert_to_numerical(curr_df)
-            # curr_df = clean_trends(curr_df)
-            # curr_df = extract_date_features(curr_df)
-            # curr_df = clean_activity(curr_df)
-
             df_list.append(curr_df)
+
             print('Added df for: ' + date_str)
+            # change to the next date to read in the next excel sheet
             date_str = get_next_date(date_str)
         
-        # create one large df from all the results
-        full_df = pd.concat(df_list)
-        full_df.reset_index(inplace=True, drop=True)
-        # full_df = one_hot_encode(full_df, ['activity'])
-
-        # clean the data using a pipeline 
-        cleaning_pipe = Pipeline(steps=[
-            ('obj_to_num', FunctionTransformer(convert_to_numerical)),
-            ('clean_trends', FunctionTransformer(clean_trends)),
-            ('extract_date_features', FunctionTransformer(extract_date_features)),
-            ('clean_activity', FunctionTransformer(clean_activity)),
-            ('oh_encode', FunctionTransformer(one_hot_encode))
-        ])
-        full_df = cleaning_pipe.fit_transform(full_df)
+        # get the fine dataframe by applying a data cleaning pipeline
+        full_df = assemble_final_df(df_list)
         return full_df
 
     except Exception as e:
         print(f'Read multiple days error: {e}')
 
         if len(df_list) > 0:
-            full_df = pd.concat(df_list)
-            full_df.reset_index(inplace=True, drop=True)
-            # one hot encode the  activities
-            full_df = one_hot_encode(full_df, ['activity'])
-
+            full_df = assemble_final_df(df_list)
             # return the results up to point of failure if something fails
             return full_df
+
+def assemble_final_df(df_list: List[pd.DataFrame]) -> pd.DataFrame:
+    """Put each of the dfs together to create a final clean df 
+
+    Args: 
+        df_list: A list of dataframes to be concatenated
+
+    Returns: 
+        The final version of the clean and full dataframe
+    """
+    # create one large df from all the results
+    full_df = pd.concat(df_list)
+    full_df.reset_index(inplace=True, drop=True)
+
+    # clean the data using a pipeline 
+    cleaning_pipe = Pipeline(steps=[
+        ('obj_to_num', FunctionTransformer(convert_to_numerical)),
+        ('clean_trends', FunctionTransformer(clean_trends)),
+        ('extract_date_features', FunctionTransformer(extract_date_features)),
+        ('clean_activity', FunctionTransformer(clean_activity)),
+        ('oh_encode', FunctionTransformer(one_hot_encode))
+    ])
+    # fit the pipeline
+    full_df = cleaning_pipe.fit_transform(full_df)
+    return full_df
 
 def one_hot_encode(df: pd.DataFrame, cols: List[str] = ['activity']) -> pd.DataFrame:
     """One hot encodes a list of columns in a dataframe
@@ -267,7 +272,7 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
     df['trend'] = df['trend'].apply(map_trends)
     return df
 
-# large_df = read_multiple_days('Wed Apr 14, 2021', 2)
+# large_df = read_multiple_days('Fri Apr 16, 2021', 5)
 
-# print(large_df.loc[61: 111, ['exercise (mins)', 'Walking', 'high intensity interval training', 'soccer', 'Elliptical', 'basketball']])
+# print(large_df.head())
 # print(large_df.info())
