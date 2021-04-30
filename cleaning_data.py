@@ -1,8 +1,11 @@
 import pandas as pd
+import numpy as np
 from typing import List, Tuple
 import math
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
 
 def read_workbook_sheet(workbook_name: str, sheet_name: str, col_index: int, drop_cols: List[str] = ['carbs (g)', 'bolus (u)', 'basal (u)', 'protein (g)', 'photos']) -> pd.DataFrame:
     """Read an excel sheet from an excel workbook into a dataframe and shifts the data to be correct
@@ -126,6 +129,13 @@ def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sug
         for i in range(num_days):
             # read the current excel spreadsheet and append it to the list of dfs for each sheet
             curr_df = read_workbook_sheet(workbook_name, date_str, col_index, drop_cols=drop_cols)
+            
+            # perform imputations on trends and glucose levels
+            cleaning_pipe_1 = pipeline(steps = [
+
+            ])
+            curr_df = clean_trends(curr_df)
+            curr_df = impute_data(curr_df)
             df_list.append(curr_df)
 
             print('Added df for: ' + date_str)
@@ -160,7 +170,7 @@ def assemble_final_df(df_list: List[pd.DataFrame]) -> pd.DataFrame:
     # clean the data using a pipeline 
     cleaning_pipe = Pipeline(steps=[
         ('obj_to_num', FunctionTransformer(convert_to_numerical)),
-        ('clean_trends', FunctionTransformer(clean_trends)),
+        # ('clean_trends', FunctionTransformer(clean_trends)),
         ('extract_date_features', FunctionTransformer(extract_date_features)),
         ('clean_activity', FunctionTransformer(clean_activity)),
         ('oh_encode', FunctionTransformer(one_hot_encode))
@@ -253,7 +263,36 @@ def clean_activity(df: pd.DataFrame) -> pd.DataFrame:
     df['activity'] = df.loc[df['activity'].isna() == False, 'activity'].apply(lambda activity: activity[:activity.find('(')].strip())
     return df
 
-def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
+
+def impute_data_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+    """Impute missing trend and glucose data based on daily averages
+
+    Trend data will be repleaced by the daily average since it is much more stable and does not have such large variability
+    Glucose (in mmol/L) varies more, so to account for any outliers in the data a medain imputation would be better
+    """
+    # create two imputers; one for each type: mean for trends and median for glucose
+    trend_imputer = SimpleImputer(strategy='mean')
+    glucose_imputer = SimpleImputer(strategy='median')
+
+    trend_transformer = Pipeline(steps=[
+        ('map_trends', FunctionTransformer(map_trends)),
+        ('trend_imputer', trend_imputer)
+    ])
+
+    # create a final preprocessor for both glucose and trend data
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('trends_transformer', trend_transformer, 'trends'),
+            ('glucose_imputer', glucose_imputer, 'mmol/L')
+        ]
+    )
+
+    # apply trend cleaning and imputations
+    df = preprocessor.fit_transform(df)
+    return df
+
+
+def map_trends(df: pd.DataFrame) -> pd.DataFrame:
     """Clean the trends column to only contain numerical data; label encode the trend data
     """
     trends_dict = {
@@ -277,7 +316,7 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
     df['trend'] = df['trend'].apply(map_trends)
     return df
 
-# large_df = read_multiple_days('Fri Apr 16, 2021', 5)
+large_df = read_multiple_days('Fri Apr 16, 2021', 5)
 
-# print(large_df.head())
-# print(large_df.info())
+print(large_df.head())
+print(large_df.info())
