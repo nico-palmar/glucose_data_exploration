@@ -266,7 +266,12 @@ def clean_trends(df: pd.DataFrame) -> pd.DataFrame:
         '↑↑': 6
     }
     def map_trends(trend):
-        if not pd.isnull(trend) and trend in trends_dict.keys():
+
+        # convert weird trend to later impute with better values
+        if trend == '⌛︎':
+            trend = np.nan
+
+        elif trend in trends_dict.keys():
             trend = trends_dict[trend]
         return trend
     df['trend'] = df['trend'].apply(map_trends)
