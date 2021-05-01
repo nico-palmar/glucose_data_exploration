@@ -102,7 +102,7 @@ def change_date(curr_day_number: str, month: str, year: str):
 
 
 
-def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sugarmate-Report-Lucas-04-21.xlsx', col_index: int = 13, drop_cols: List[str] = ['carbs (g)', 'bolus (u)', 'basal (u)', 'protein (g)', 'photos']) -> pd.DataFrame:
+def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sugarmate-Report-04-21.xlsx', col_index: int = 13, drop_cols: List[str] = ['carbs (g)', 'bolus (u)', 'basal (u)', 'protein (g)', 'photos']) -> pd.DataFrame:
     """Reads information from multple days into a dataframe and cleans the dataframe
 
     Args:
