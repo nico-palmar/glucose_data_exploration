@@ -131,11 +131,7 @@ def read_multiple_days(start_date: str, num_days: int, workbook_name: str = 'Sug
             curr_df = read_workbook_sheet(workbook_name, date_str, col_index, drop_cols=drop_cols)
             
             # perform imputations on trends and glucose levels
-            cleaning_pipe_1 = pipeline(steps = [
-
-            ])
-            curr_df = clean_trends(curr_df)
-            curr_df = impute_data(curr_df)
+            curr_df = impute_data_pipeline(curr_df)
             df_list.append(curr_df)
 
             print('Added df for: ' + date_str)
@@ -169,7 +165,7 @@ def assemble_final_df(df_list: List[pd.DataFrame]) -> pd.DataFrame:
 
     # clean the data using a pipeline 
     cleaning_pipe = Pipeline(steps=[
-        ('obj_to_num', FunctionTransformer(convert_to_numerical)),
+        # ('obj_to_num', FunctionTransformer(convert_to_numerical)),
         # ('clean_trends', FunctionTransformer(clean_trends)),
         ('extract_date_features', FunctionTransformer(extract_date_features)),
         ('clean_activity', FunctionTransformer(clean_activity)),
@@ -178,6 +174,22 @@ def assemble_final_df(df_list: List[pd.DataFrame]) -> pd.DataFrame:
     # fit the pipeline
     full_df = cleaning_pipe.fit_transform(full_df)
     return full_df
+
+def impute_data_pipeline(df: pd.DataFrame) -> pd.DataFrame:
+    """Impute missing trend and glucose data based on time series interpolation
+    """
+    trend_transformer = Pipeline(steps=[
+        ('map_trends', FunctionTransformer(map_trends_outer)),
+        ('obj_to_num', FunctionTransformer(convert_to_numerical)),
+    ])
+
+    # transform to numerical data
+    df = trend_transformer.fit_transform(df)
+    # use pandas linear imputation for time series data and round the new trend values 
+    df['trend'] = df['trend'].interpolate().round()
+    df['mmol/L'] = df['mmol/L'].interpolate().round(2)
+    return df
+
 
 def one_hot_encode(df: pd.DataFrame, cols: List[str] = ['activity']) -> pd.DataFrame:
     """One hot encodes a list of columns in a dataframe
@@ -264,35 +276,7 @@ def clean_activity(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def impute_data_pipeline(df: pd.DataFrame) -> pd.DataFrame:
-    """Impute missing trend and glucose data based on daily averages
-
-    Trend data will be repleaced by the daily average since it is much more stable and does not have such large variability
-    Glucose (in mmol/L) varies more, so to account for any outliers in the data a medain imputation would be better
-    """
-    # create two imputers; one for each type: mean for trends and median for glucose
-    trend_imputer = SimpleImputer(strategy='mean')
-    glucose_imputer = SimpleImputer(strategy='median')
-
-    trend_transformer = Pipeline(steps=[
-        ('map_trends', FunctionTransformer(map_trends)),
-        ('trend_imputer', trend_imputer)
-    ])
-
-    # create a final preprocessor for both glucose and trend data
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('trends_transformer', trend_transformer, 'trends'),
-            ('glucose_imputer', glucose_imputer, 'mmol/L')
-        ]
-    )
-
-    # apply trend cleaning and imputations
-    df = preprocessor.fit_transform(df)
-    return df
-
-
-def map_trends(df: pd.DataFrame) -> pd.DataFrame:
+def map_trends_outer(df: pd.DataFrame) -> pd.DataFrame:
     """Clean the trends column to only contain numerical data; label encode the trend data
     """
     trends_dict = {
@@ -304,8 +288,8 @@ def map_trends(df: pd.DataFrame) -> pd.DataFrame:
         '↑': 5,
         '↑↑': 6
     }
-    def map_trends(trend):
 
+    def map_trends_inner(trend: str) -> int:
         # convert weird trend to later impute with better values
         if trend == '⌛︎':
             trend = np.nan
@@ -313,10 +297,11 @@ def map_trends(df: pd.DataFrame) -> pd.DataFrame:
         elif trend in trends_dict.keys():
             trend = trends_dict[trend]
         return trend
-    df['trend'] = df['trend'].apply(map_trends)
+    
+    df['trend'] = df['trend'].apply(map_trends_inner)
     return df
 
-large_df = read_multiple_days('Fri Apr 16, 2021', 5)
+# large_df = read_multiple_days('Fri Apr 16, 2021', 5)
 
-print(large_df.head())
-print(large_df.info())
+# print(large_df.loc[70: 120])
+# print(large_df.info())
