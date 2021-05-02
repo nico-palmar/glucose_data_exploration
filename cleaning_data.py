@@ -301,6 +301,24 @@ def map_trends_outer(df: pd.DataFrame) -> pd.DataFrame:
     df['trend'] = df['trend'].apply(map_trends_inner)
     return df
 
+def to_times_series(df: pd.DataFrame, drop_new_cols: bool = True) -> pd.DataFrame:
+    """Turn a data frame with time info into a time series data frame (where the index is by date time info)
+    """
+    df=df.copy()
+
+    # create new columns for hours and minutes
+    df['hour'] = df['hours_time'] // 1
+    df['minute'] = (df['hours_time'] % 1) * 60
+    
+    datetime_cols = ['year', 'month', 'day', 'hour', 'minute']
+    df['datetime'] = pd.to_datetime(df[datetime_cols])
+    df.set_index('datetime', inplace=True)
+
+    if drop_new_cols:
+        df.drop(columns=['hour', 'minute'], inplace=True)
+    return df
+
+
 # large_df = read_multiple_days('Fri Apr 16, 2021', 5)
 
 # print(large_df.loc[70: 120])
