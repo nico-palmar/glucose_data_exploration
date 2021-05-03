@@ -51,4 +51,44 @@ Data Analysis Done Using
 
 ## Screenshots
 
-Coming soon 
+**Refer to graphs folder for all images**
+
+1. Summary Data Analysis 
+
+![Summary Graphs](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/exercise_v_bs.png)
+
+---------------------------------
+
+2. March Blood Sugar Analysis 
+
+- Examining Exercise vs Low Glucose Levels at Night
+
+![Exercise Day Before Night Lows](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/march_exercise_before_night_low.png)
+
+![Exercise 2 Days Before Night Lows](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/march_exercise_2_days_before_night_low.png)
+
+![Exercise Not Before Night Lows](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/march_exercise_not_before_night_low.png)
+
+- Amount of Exercise Violin Plots 
+![Exercise and Low Violin Plots](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/exercise_low_violin_plots.png)
+
+![Exercise and In Range Violin Plots](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/exercise_in_range_violin_plots.png)
+
+- Instantaneous Blood Sugar Trend Analysis
+
+**Coming Soon**
+
+---------------------------------
+
+3. 2021 Glucose Level Outlier Detection 
+
+- 2021 Glucose Trends  
+
+![2021 Glucose Trends Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/time_series_01-04_2021.png)
+
+- 2021 Outlier Detection Using Isolation Forest  
+
+![2021 Glucose Outliers Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/iso_forest_outliers.png)
+
+
+
