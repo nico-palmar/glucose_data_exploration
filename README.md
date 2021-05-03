@@ -4,7 +4,7 @@ This project analyzes changes in glucose, insulin, exercise, and instantaneous g
 
 --- --------------------------------
 
-### Note: This project is a work in progress and will have new findings/investigations explained in the **highlights** section (below)
+### Note: This project is a work in progress and will have new findings/investigations explained in the **highlights** section (below). Also, refer to screenshots of graphs below for an glimpse into the work done
 
 ----------------------------------------------------------------
 
@@ -24,12 +24,12 @@ Data Analysis Done Using
 
 - Python 
 - Pandas 
-- Sklearn (for data cleaning and models)
+- Scikit-learn (for data cleaning and models)
 - Plotly (interactive graphs)
 - Seaborn 
 - Matplotlib
-- Numpy 
-- Scipy (statistical models and hypothesis testing)
+- NumPy 
+- SciPy (statistical models and hypothesis testing)
 
 ## Highlights
 
@@ -59,7 +59,19 @@ Data Analysis Done Using
 
 ---------------------------------
 
-2. March Blood Sugar Analysis 
+2. 2021 Glucose Level Outlier Detection 
+
+- 2021 Glucose Trends  
+
+![2021 Glucose Trends Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/time_series_01-04_2021.png)
+
+- 2021 Outlier Detection Using Isolation Forest  
+
+![2021 Glucose Outliers Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/iso_forest_outliers.png)
+
+--- ------------------------------
+
+3. March Blood Sugar Analysis 
 
 - Examining Exercise vs Low Glucose Levels at Night
 
@@ -70,6 +82,7 @@ Data Analysis Done Using
 ![Exercise Not Before Night Lows](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/march_exercise_not_before_night_low.png)
 
 - Amount of Exercise Violin Plots 
+
 ![Exercise and Low Violin Plots](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/exercise_low_violin_plots.png)
 
 ![Exercise and In Range Violin Plots](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/exercise_in_range_violin_plots.png)
@@ -78,17 +91,8 @@ Data Analysis Done Using
 
 **Coming Soon**
 
----------------------------------
 
-3. 2021 Glucose Level Outlier Detection 
 
-- 2021 Glucose Trends  
-
-![2021 Glucose Trends Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/time_series_01-04_2021.png)
-
-- 2021 Outlier Detection Using Isolation Forest  
-
-![2021 Glucose Outliers Graph](https://github.com/Nick-palmar/glucose_data_exploration/blob/main/graphs/iso_forest_outliers.png)
 
 
 
